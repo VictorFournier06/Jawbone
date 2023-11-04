@@ -1,12 +1,13 @@
 #imports
 import os
+from os.path import sep
 
 def load_books(db_type = "Tom Swift"):
     #Open all the files in the directory and store them in the list 'files'
     files = []
-    for filename in os.listdir(os.path.dirname(os.getcwd()) + "\\Books\\" + db_type):
+    for filename in os.listdir(os.path.dirname(os.getcwd()) + sep + "Books" + sep + db_type):
         if filename.endswith(".txt"):
-            with open(os.path.dirname(os.getcwd()) + "\\Books\\" + db_type + "\\" + filename, 'r') as f:
+            with open(os.path.dirname(os.getcwd()) + sep + "Books" + sep + db_type + sep + filename, 'r') as f:
                 text = f.read()
                 files.append(text)
 
