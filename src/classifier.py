@@ -3,11 +3,12 @@ import torch
 
 #classifier class
 class Classifier(torch.nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim, accelerator):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
+        self.accelerator = accelerator
         self.mlp = torch.nn.Sequential(
             torch.nn.Linear(input_dim, hidden_dim),
             torch.nn.ReLU(),
@@ -35,7 +36,7 @@ class Classifier(torch.nn.Module):
             optimizer.zero_grad()
             y_pred = self.forward(X_train.float().cuda())
             loss = self.loss_fn()(y_pred, y_train.float().cuda())
-            loss.backward()
+            self.accelerator.backward(loss)
             optimizer.step()
             if epoch % (epochs//10) == 0:
                 if prints:
