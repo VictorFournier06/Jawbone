@@ -1,3 +1,4 @@
+#TSP approximation 1
 #find a local minimum order than minimizes the sum of the distances between consecutive sentences (order 1) in O(N^2)
 def greedy_add(distances, permutation = []):
     permutation = list(permutation)
@@ -18,7 +19,7 @@ def greedy_add(distances, permutation = []):
         ordered.insert(i_min, i)
     return(ordered)
 
-
+#TSP approximation 2
 #alternative algorithm that tries to find a sentence to place better from in O(n^2)
 def greedy_sort(distances, permutation = []):
     permutation = list(permutation)
@@ -41,3 +42,5 @@ def greedy_sort(distances, permutation = []):
             permutation.remove(current)
             permutation.insert(i_min, current)
     return(permutation)
+
+#TSP approximation 3 (good one)
