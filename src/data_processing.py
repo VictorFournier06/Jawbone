@@ -52,7 +52,7 @@ def create_pairs(sentence_embeddings):
     return torch.stack(X), torch.stack(y).unsqueeze(1)
 
 #add any diagonal values to the flattened matrix y_pred2
-#convert y_pred2 from a list to a symmetric matrix by averaging the values of the upper and lower triangular
+#convert y_pred2 from a list to a shifted antisymmetric matrix by averaging the predictions of the upper and lower triangular
 def pred_to_pairwise(pred):
     n = np.ceil(pred.shape[0]**0.5).astype(int)
     L = pred.cpu().detach().numpy().flatten().tolist()
