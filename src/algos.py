@@ -1,3 +1,7 @@
+#imports
+import numpy as np
+import networkx as nx
+
 #TSP approximation 1
 #find a local minimum order than minimizes the sum of the distances between consecutive sentences (order 1) in O(N^2)
 def insertion_sort(distances, permutation = []):
@@ -118,3 +122,54 @@ def partition(pairwise_order, permutation, first, last):
             permutation[leftmark], permutation[rightmark] = permutation[rightmark], permutation[leftmark]
     permutation[first], permutation[rightmark] = permutation[rightmark], permutation[first]
     return(rightmark)
+
+#function taking predictions of pairwise orderings probabilities and returning the order while enforcing transitivity
+#Weighted transitivity closure, weights are the inverse logit of the probabilities
+def order_from_pairwise(pairwise_probs):
+    n = len(pairwise_probs)
+    #create the graph
+    G = nx.DiGraph()
+    G.add_nodes_from(range(n))
+    for i in range(n):
+        for j in range(i+1, n):
+            val = abs(np.log(pairwise_probs[i][j]/(1-pairwise_probs[i][j]))) 
+            weights = 1/val if val >= 1e-7 else float('inf')
+            if pairwise_probs[i][j] > 0.5:
+                G.add_edge(i, j, weight=weights)
+            else:
+                G.add_edge(j, i, weight=weights)
+    #compute the min weight transitive closure with Floyd-Warshall algorithm
+    min_closure = min_weight_transitive_closure(G, weight='weight')
+
+    return min_closure
+
+def topological_sort(G):
+    #use topological sorting to get the minimal order
+    min_order = list(nx.topological_sort(G))
+    return(min_order)    
+
+def min_weight_transitive_closure(graph, weight='weight'):
+    # Compute the minimum distances between each pair of node using Floyd-Warshall (the smaller the distance the more likely the ordering)
+    min_distances = nx.floyd_warshall(graph, weight=weight)
+
+    # Make a list of edges sorted by increasing weight
+    edges = sorted(graph.edges(data=True), key=lambda t: t[2].get(weight, 1))
+
+    # Create a new Directed Graph to represent the minimal weight transitive closure
+    min_closure = nx.DiGraph()
+
+    # Copy nodes from the original graph to min_closure
+    min_closure.add_nodes_from(graph.nodes)
+
+    # Add edges based on the Floyd-Warshall results, in increasing weight order, ensuring acyclicity
+    for u, v, _ in edges:
+        if u != v:
+            if min_distances[u][v] != float('inf') and min_distances[u][v] <= min_distances[v][u]:
+                # Add an edge only if it doesn't create a cycle
+                if not nx.has_path(min_closure, v, u):
+                    min_closure.add_edge(u, v, weight=min_distances[u][v])
+            elif min_distances[v][u] != float('inf') and min_distances[v][u] < min_distances[u][v]:
+                # Add an edge only if it doesn't create a cycle
+                if not nx.has_path(min_closure, u, v):
+                    min_closure.add_edge(v, u, weight=min_distances[v][u])
+    return min_closure

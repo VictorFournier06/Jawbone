@@ -1,7 +1,6 @@
 #imports
 import numpy as np
 import torch
-import networkx as nx
 
 #function to split the sentences into discard, training, validation and testing sets while keeping the order
 def split_sentences(sentence_embedding, fraction_to_keep = 0.1, fraction_to_train = 0.8, fraction_to_test = 0.5):
@@ -42,65 +41,51 @@ def create_pairs(sentence_embeddings):
     
     for j in range(sentence_embeddings.size(0)):        #for each ordered pair of sentences
         for k in range(sentence_embeddings.size(0)):
-            if j != k:
-                # Concatenate sentence embeddings
-                input_pair = torch.cat((sentence_embeddings[j], sentence_embeddings[k]), dim=0).to("cuda")
-                X.append(input_pair)
-                # Label whether the first sentence comes before the second
+            # Concatenate sentence embeddings
+            input_pair = torch.cat((sentence_embeddings[j], sentence_embeddings[k]), dim=0).to("cuda")
+            X.append(input_pair)
+            # Label whether the first sentence comes before the second
+            if j==k:
+                y.append(torch.tensor(0.5).to("cuda"))
+            else:
                 y.append(torch.tensor(j < k, dtype=torch.float).to("cuda"))
+            
     
     return torch.stack(X), torch.stack(y).unsqueeze(1)
 
-#add any diagonal values to the flattened matrix y_pred2
-#convert y_pred2 from a list to a shifted antisymmetric matrix by averaging the predictions of the upper and lower triangular
-def pred_to_pairwise(pred):
-    n = np.ceil(pred.shape[0]**0.5).astype(int)
+#convert y2_pred from list to matrix
+def flattened_to_matrix(pred):
+    #Ouput matrix is of size n*n
+    n = int(pred.shape[0]**0.5)
+    if n != pred.shape[0]**0.5:
+        print("size error, input is not a square matrix")
     L = pred.cpu().detach().numpy().flatten().tolist()
+    
+    '''
+    #add diagonal values
     if len(L < n*n) :
         for i in range(n):
             L.insert(i*i, 0.5)
-    pairwise_probabilities = [[(L[i*n+j]+(1-L[j*n+i]))/2 for i in range(n)] for j in range(n)]
-    return(pairwise_probabilities)
+    '''
 
-#function taking predictions of pairwise orderings probabilities and returning the order while enforcing transitivity
-#Weighted transitivity closure, weights are the inverse logit of the probabilities
-def weighted_transitivity_closure(pairwise_probs):
-    n = len(pairwise_probs)
-    #create the graph
-    G = nx.DiGraph()
-    G.add_nodes_from(range(n))
+    #average predictions, diagonal values get set to 0.5
+    pairwise_probabilities = [[L[i+n*j] for i in range(n)] for j in range(n)]
+    return(np.array(pairwise_probabilities))
+
+#convert M to a shifted antisymmetric matrix by averaging the predictions of the upper and lower triangular
+def average_matrix(M):
+    n = M.shape[0]
+    M2 = M.copy()
     for i in range(n):
-        for j in range(i+1, n):
-            val = abs(np.log(pairwise_probs[i][j]/(1-pairwise_probs[i][j]))) 
-            weights = 1/val if val >= 1e-7 else float('inf')
-            if pairwise_probs[i][j] > 0.5:
-                G.add_edge(i, j, weight=weights)
-            else:
-                G.add_edge(j, i, weight=weights)
-    #compute the min weight transitive closure with Floyd-Warshall algorithm
-    min_closure = min_weight_transitive_closure(G, weight='weight')
-    
-    #use topological sorting to get the minimal order
-    min_order = list(nx.topological_sort(min_closure))
-    return min_order
+        for j in range(n):
+            M2[i][j] = (M[i][j]+(1-M[j][i]))/2
+    return(M2)
 
-def min_weight_transitive_closure(graph, weight='weight'):
-    # Compute the minimum distances between each pair of node using Floyd-Warshall (the smaller the distance the more likely the ordering)
-    min_distances = nx.floyd_warshall(graph, weight=weight)
-
-    # Create a new Directed Graph to represent the minimal weight transitive closure
-    min_closure = nx.DiGraph()
-
-    # Copy nodes from the original graph to min_closure
-    min_closure.add_nodes_from(graph.nodes)
-
-    # Add edges based on the Floyd-Warshall results, ensuring acyclicity
-    for u in graph.nodes:
-        for v in graph.nodes:
-            if u != v and min_distances[u][v] != float('inf') and min_distances[u][v] <= min_distances[v][u]:
-                # Add an edge only if it doesn't create a cycle
-                if not nx.has_path(min_closure, v, u):
-                    min_closure.add_edge(u, v, weight=min_distances[u][v])
-
-    return min_closure
-    
+#convert a transitive graph of directed edges to a prediction-like list of pairwise orderings
+def edges_to_pred(G):
+    L = []
+    for i in range(len(G)):
+        for j in range(len(G)):
+            if i != j:
+                L.append(G.has_edge(i,j))
+    return(np.array(L).astype(int))

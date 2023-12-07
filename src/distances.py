@@ -15,7 +15,7 @@ def avg_consecutive_dist(order, pairwise_dist): #distances are the distances for
     return(sum/n)
 
 #permutation swap distance
-def avg_swap_dist(permutation1, permutation2):
+def kendall_tau(permutation1, permutation2):
     if len(permutation1) != len(permutation2):
         raise Exception("permutations are not of the same length")
     n = len(permutation1)
@@ -24,7 +24,7 @@ def avg_swap_dist(permutation1, permutation2):
         for j in range(i+1, n):
             if (permutation1[i] < permutation1[j]) != (permutation2[i] < permutation2[j]):
                 sum += 1
-    return(sum/n/n)
+    return(1-4*sum/(n-1)/n)
 
 #R distance - unidirectional adjacency distance
 def avg_R_dist(permutation1, permutation2):
