@@ -27,7 +27,7 @@ def kendall_tau(permutation1, permutation2):
     return(1-4*sum/(n-1)/n)
 
 #R distance - unidirectional adjacency distance
-def avg_R_dist(permutation1, permutation2):
+def PMR(permutation1, permutation2):
     if len(permutation1) != len(permutation2):
         raise Exception("permutations are not of the same length")
     n = len(permutation1)
@@ -37,4 +37,4 @@ def avg_R_dist(permutation1, permutation2):
         pairs1.append((permutation1[i], permutation1[(i+1)%n]))
         pairs2.append((permutation2[i], permutation2[(i+1)%n]))
     #return the number of common pairs
-    return(1-len(set(pairs1).intersection(set(pairs2)))/n)
+    return(len(set(pairs1).intersection(set(pairs2)))/n)

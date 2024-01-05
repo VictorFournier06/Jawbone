@@ -149,7 +149,7 @@ def topological_sort(G):
     return(min_order)    
 
 def min_weight_transitive_closure(graph, weight='weight'):
-    # Compute the minimum distances between each pair of node using Floyd-Warshall (the smaller the distance the more likely the ordering)
+    # Compute the minimum distances between each pair of nodes using Floyd-Warshall (the smaller the distance the more likely the ordering)
     min_distances = nx.floyd_warshall(graph, weight=weight)
 
     # Make a list of edges sorted by increasing weight
